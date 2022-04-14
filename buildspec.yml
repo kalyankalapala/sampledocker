@@ -4,29 +4,13 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws --version
-      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
-      - REPOSITORY_URI=850769113977.dkr.ecr.us-east-1.amazonaws.com/sampledocker
-      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - IMAGE_TAG=${COMMIT_HASH:=latest}
-      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 850769113977.dkr.ecr.us-east-1.amazonaws.com
+      - $(aws ecr get-login --no-include-email --region ${AWS_DEFAULT_REGION})
+      - REPOSITORY_URI_SERVER=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_NAME}
+
   build:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - docker build -t $REPOSITORY_URI:latest .
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
-  post_build:
-    commands:
-      - echo Build completed on `date`
-      - echo Pushing the Docker images...
-      - docker push $REPOSITORY_URI:latest
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo Writing image definitions file...
-      - printf '[{"name":"kalyan","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
-      - cat imagedefinitions.json 
-      #- zip -r imagedefinitions.json.zip imagedefinitions.json
-      #- aws s3 cp ./imagedefinitions.json.zip s3://dockernodejs
-      # docker
-artifacts:
-    files: imagedefinitions.json
+      - docker-compose build
+      - echo Tagging the Docker image...
+      - docker tag demo:latest $REPOSITORY_URI:latest
